@@ -11,8 +11,8 @@ export class DrawAbstract {
         return Math.min(this.height, this.width) / 2;
     }
 
-    clear() {
-        this.ctx.fillStyle = 'hsla(180, 50%, 0%, 1.0)';
+    clear(opacity = 1.0) {
+        this.ctx.fillStyle = `hsla(180, 50%, 0%, ${opacity})`;
         this.ctx.fillRect(0, 0, this.width, this.height);
         return this;
     }

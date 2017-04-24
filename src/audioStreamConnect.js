@@ -25,6 +25,9 @@ export function connectAudio({cbTimeDataUnit8, cbFreqDataFloat32, enableSoundOut
             }
 
             analyser.fftSize = 2048;
+            analyser.minDecibels = -140;
+            analyser.maxDecibels = -30;
+            analyser.smoothingTimeConstant = 0.2;
             const bufferLength = analyser.frequencyBinCount;
             const dataTimeArray = new Uint8Array(bufferLength);
             const dataFreqArray = new Float32Array(bufferLength);

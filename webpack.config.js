@@ -3,7 +3,7 @@
 const webpack = require('webpack');
 
 module.exports = {
-  entry:  './src.js',
+  entry:  './src/src.js',
   output: {
     filename: './public/bundle.js',
   },

@@ -1,13 +1,35 @@
-<!doctype html>
+<!DOCTYPE HTML>
 <html>
-<head><title>Audio to Canvas demo</title></head>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <title>Audio to Canvas demo</title>
+    <style>
+        #canvas-container {
+            display: flex;
+            flex-wrap: wrap;
+            margin: auto;
+        }
+        #canvas-container div {
+            display: inline-grid;
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+        }
+    </style>
+</head>
 <body>
+<div id="canvas-container">
     <canvas id="canvasCircle" width="768" height="768">
     </canvas>
-    <canvas id="canvasTime" width="1024" height="768">
-    </canvas>
-    <canvas id="canvasSpectrum" width="1024" height="768">
-    </canvas>
-    <script src="bundle.js"></script>
+    <div>
+        <canvas id="canvasTime" width="1024" height="384">
+        </canvas>
+        <canvas id="canvasSpectrum" width="1024" height="384">
+        </canvas>
+    </div>
+</div>
+<script src="bundle.js"></script>
 </body>
 </html>
