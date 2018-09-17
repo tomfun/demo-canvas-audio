@@ -12,7 +12,7 @@ export function connectAudio(audioCtx, {cbTimeDataUnit8, cbFreqDataFloat32}) {
     analyser.connect(gainNode);
     gainNode.connect(audioCtx.destination);
 
-    analyser.fftSize = 2048;
+    analyser.fftSize = 4096;
     analyser.minDecibels = -140;
     analyser.maxDecibels = -30;
     analyser.smoothingTimeConstant = 0.2;

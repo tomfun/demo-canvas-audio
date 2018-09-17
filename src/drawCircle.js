@@ -18,8 +18,8 @@ export class DrawCircle extends DrawAbstract {
     }
 
     _drawSingleFrequency(freq, ampl) {
-        const minFreq = 20;
-        const maxFreq = 20 * 1000;
+        const minFreq = 80;
+        const maxFreq = 16 * 1000;
         const minDbVolume = 90;
         if (freq < minFreq || freq > maxFreq) {
             return this;
@@ -48,7 +48,7 @@ export class DrawCircle extends DrawAbstract {
     drawSingleFrequency(freq, ampl) {
         // this.clear();
         this.ctx.beginPath();
-        this._drawSingleFrequency(freq, ampl)
+        this._drawSingleFrequency(freq, ampl);
         this.ctx.closePath();
         this.ctx.stroke();
         return this;

@@ -1,6 +1,7 @@
 'use strict';
 import {DrawCircle} from './drawCircle'
 import {DrawSpectrum} from './drawSpectrum'
+import {FrequencyEcho} from './frequencyEcho'
 import {DrawTime} from './drawTime';
 import {connectAudio} from './audioStreamConnect';
 import {createContext, getAudioElementSource, getMicrophoneSource} from './audioSource';
@@ -8,14 +9,24 @@ import {createContext, getAudioElementSource, getMicrophoneSource} from './audio
 const audioCtx = createContext();
 
 const circleDrawer = new DrawCircle(document.getElementById('canvasCircle'));
+const circleDrawer2 = new DrawCircle(document.getElementById('canvasCircle2'));
 const spectrumDrawer = new DrawSpectrum(document.getElementById('canvasSpectrum'));
+const spectrumDrawer2 = new DrawSpectrum(document.getElementById('canvasSpectrum2'));
 const timeDrawer = new DrawTime(document.getElementById('canvasTime'));
+
+const frequencyEcho = new FrequencyEcho({
+    cbFreqDataFloat32(...args) {
+        circleDrawer2.draw(...args);
+        spectrumDrawer2.draw(...args);
+    },
+});
 
 const visualizeApi = connectAudio(audioCtx, {
     cbTimeDataUnit8: timeDrawer.draw.bind(timeDrawer),
     cbFreqDataFloat32(...args) {
         circleDrawer.draw(...args);
         spectrumDrawer.draw(...args);
+        frequencyEcho.draw(...args);
     },
 });
 
