@@ -26,7 +26,7 @@ export class DrawCircle extends DrawAbstract {
         }
         const freqLog = Math.log2(freq) - Math.log2(minFreq);
         const widthFreqLog = Math.log2(maxFreq) - Math.log2(minFreq);
-        const hue = Math.round(360 * freqLog / widthFreqLog);
+        const hue = Math.round(270 * freqLog / widthFreqLog);
 
         const angle = (freqLog - (freqLog | 0)) * Math.PI * 2;
 
