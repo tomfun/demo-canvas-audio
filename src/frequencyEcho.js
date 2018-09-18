@@ -1,7 +1,7 @@
 'use strict';
 
 export class FrequencyEcho {
-    constructor({minDb = -140, maxDb = -30, frequencyEcho = 40, frequencyZoom = 4, cbFreqDataFloat32}) {
+    constructor({minDb = -140, maxDb = -30, frequencyEcho = 20, frequencyZoom = 4, cbFreqDataFloat32}) {
         this.minDb = minDb;
         this.maxDb = maxDb;
         this.frequencyEcho = frequencyEcho;
@@ -16,17 +16,20 @@ export class FrequencyEcho {
         if (!this._bufferdataFreqArray || this._bufferdataFreqArray.length !== length * this.frequencyZoom) {
             this._bufferdataFreqArray = new Float32Array(length * this.frequencyZoom);
             this._bufferdataFreqArray2 = new Float32Array(this._bufferdataFreqArray.length);
+            this._bufferdataFreqArray3 = new Float32Array(this._bufferdataFreqArray.length);
         }
         this.axMinIn = this.maxDb - this.minDb;
 
+        this._bufferdataFreqArray3.fill(0);
 
         for (let i = 0; i < this.frequencyZoom; i++) {
-            this._bufferdataFreqArray[i] = 0;
+            this._bufferdataFreqArray[i + (length - 1) * this.frequencyZoom] = fftAmplitudeDbFloatArray[length - 1];
         }
-        for (let i = 1; i < length; i++) {
-            for (let j = 0; j < this.frequencyZoom; j++) {
-                this._bufferdataFreqArray[(i - 1) * this.frequencyZoom + j] =
-                    (fftAmplitudeDbFloatArray[i - 1] * (this.frequencyZoom - j) + fftAmplitudeDbFloatArray[i] * j)
+        for (let i = 0; i < length - 1; i++) {
+            this._bufferdataFreqArray[i * this.frequencyZoom] = fftAmplitudeDbFloatArray[i];
+            for (let j = 1; j < this.frequencyZoom; j++) {
+                this._bufferdataFreqArray[i * this.frequencyZoom + j] =
+                    (fftAmplitudeDbFloatArray[i] * (this.frequencyZoom - j) + fftAmplitudeDbFloatArray[i + 1] * j)
                     / this.frequencyZoom;
             }
         }
@@ -50,18 +53,45 @@ export class FrequencyEcho {
     draw(fftAmplitudeDbFloatArray, length, fDiscr) {
         this.initNewData(fftAmplitudeDbFloatArray, length);
 
+        const fractionalIndexSet = (i, nHarm, cb) => {
+            if (i % nHarm) {
+                const part = (i % nHarm) / nHarm;
+                cb(Math.floor(i / nHarm), (1 - part));
+                cb(Math.ceil(i / nHarm), part);
+            } else {
+                cb(i / nHarm, 1);
+            }
+        };
+        const harmonicMaxN = 3;
+        const harmonicsNumbers = (new Array(harmonicMaxN - 1)).fill(0).map((_v, i) => 2 + i);
+
+        if (!this._bufferdataFreqArray4 || this._bufferdataFreqArray4.length !== length * this.frequencyZoom) {
+            this._bufferdataFreqArray4 = new Float32Array(this._bufferdataFreqArray.length);
+            this._bufferdataFreqArray4.fill(0);
+
+
+            for (let i = length * this.frequencyZoom - 1; i > 0; i--) {
+                harmonicsNumbers.forEach((nHarm) => {
+                    fractionalIndexSet(i, nHarm, (ind, part) => this._bufferdataFreqArray4[ind] += part);
+                });
+            }
+        }
         for (let i = length * this.frequencyZoom - 1; i > 0; i--) {
             const echoValue = this._normalRange(i) * this.frequencyEcho;
             if (echoValue <= 0) {
                 continue; // to prevent another accumulative error when input is so low
             }
-            if (i % 2) {
-                // a = a + a * a2 * ef
-                this._echoPlus((i - 1) / 2, echoValue * 0.5);
-                this._echoPlus((i + 1) / 2, echoValue * 0.5);
-            } else {
-                this._echoPlus(i / 2, echoValue);
-            }
+            // 2. 20 - 0, 80 ...., 20 - 32 * 1/2
+            // 3. 40 - 0, 120...., 106.66 - 30 * 1/3, 13.33 - 33 * 1/3
+            // 4. 60 - 0, 160...., 60 - 32 * 1/4
+            // 5. 80 - 0, 200...., 152 - 30 * 1/5, 8 - 35 * 1/5
+            harmonicsNumbers.forEach((nHarm) => {
+                fractionalIndexSet(i, nHarm, (ind, part) => this._echoPlus(ind, part * echoValue));
+            });
+        }
+        const shit = this._bufferdataFreqArray3.reduce((a, v) => a + v) / this._bufferdataFreqArray3.length;
+        for (let i = length * this.frequencyZoom - 1; i > 0; i--) {
+            this._bufferdataFreqArray[i] += this._bufferdataFreqArray3[i] - this._bufferdataFreqArray4[i] * shit;
         }
 
         // for (let i = 0; i < this._bufferdataFreqArray.length; i++) {
@@ -70,12 +100,27 @@ export class FrequencyEcho {
         // for (let i = 0; i < this.frequencyZoom; i++) {
         //     this._bufferdataFreqArray2[i] = 0;
         // }
-        const tmpMatrix = new Array(this.frequencyZoom).fill(0).map((_v, i) => i).slice(1);
-        const sum = tmpMatrix.reduce((a, v) => a + v);
-        const tmpMatrix2 = tmpMatrix.slice(1).map(v => -v);
-        const matrix = tmpMatrix2.concat([3 * sum]).concat(tmpMatrix2.reverse()).map(v => v / sum);
-        for (let i = 0; i < this._bufferdataFreqArray.length - this.frequencyZoom; i++) {
-            this._bufferdataFreqArray2[i] = matrix.reduce((a, m, j) => a + this._bufferdataFreqArray[i + j - this.frequencyZoom] * m, -7);
+        this.sharpenLength = this.frequencyZoom * 2;
+        const tmpMatrix = new Array(this.sharpenLength).fill(0).map((_v, i) => i).slice(1);
+        const sum = tmpMatrix.reduce((a, v) => a + v, 0);
+        const tmpMatrix2 = tmpMatrix.map(v => -v);
+        const matrix = this.sharpenLength > 1
+            ? tmpMatrix2.concat([3 * sum]).concat(tmpMatrix2.reverse()).map(v => v / sum)
+            : [1];
+        for (let i = 0; i < this.sharpenLength; i++) {
+            this._bufferdataFreqArray2[i] = this._bufferdataFreqArray[i];
+        }
+        for (let i = this._bufferdataFreqArray.length - this.sharpenLength; i < this._bufferdataFreqArray.length; i++) {
+            this._bufferdataFreqArray2[i] = this._bufferdataFreqArray[i];
+        }
+        for (let i = this.sharpenLength; i < this._bufferdataFreqArray.length - this.sharpenLength; i++) {
+            this._bufferdataFreqArray2[i] = matrix.reduce((a, m, j) => a + this._bufferdataFreqArray[i + j - this.sharpenLength] * m, 0);
+        }
+
+        // high pass filter
+        this.highPassSlope = 2000;
+        for (let i = 1; i < this._bufferdataFreqArray.length - 1; i++) {
+            this._bufferdataFreqArray2[i] -= this.highPassSlope * ((i + 1) / i - 1);
         }
 
         this.cbFreqDataFloat32(this._bufferdataFreqArray2, length * this.frequencyZoom, fDiscr);
@@ -85,9 +130,7 @@ export class FrequencyEcho {
         return (this._bufferdataFreqArray[i] - this.minDb) / this.axMinIn;
     }
 
-    _echoPlus(id2, echoValue) {
-        const plus = this._normalRange(id2) * echoValue;
-        this._bufferdataFreqArray[id2] += plus - 2 * this._echoSum / this._bufferdataFreqArray.length;
-        this._echoSum += plus;
+    _echoPlus(idn, echoValue) {
+        this._bufferdataFreqArray3[idn] += this._normalRange(idn) * echoValue;
     }
 }
