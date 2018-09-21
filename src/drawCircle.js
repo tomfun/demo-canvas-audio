@@ -4,6 +4,9 @@ import {DrawAbstract} from './drawAbstract';
 export class DrawCircle extends DrawAbstract {
     constructor(canvas) {
         super(canvas.getContext("2d"), canvas.width, canvas.height);
+        this.minFreq = 80;
+        this.maxFreq = 16 * 1000;
+        this.minDbVolume = 90;
     }
 
     clear() {
@@ -18,21 +21,18 @@ export class DrawCircle extends DrawAbstract {
     }
 
     _drawSingleFrequency(freq, ampl) {
-        const minFreq = 80;
-        const maxFreq = 16 * 1000;
-        const minDbVolume = 90;
-        if (freq < minFreq || freq > maxFreq) {
+        if (freq < this.minFreq || freq > this.maxFreq) {
             return this;
         }
-        const freqLog = Math.log2(freq) - Math.log2(minFreq);
-        const widthFreqLog = Math.log2(maxFreq) - Math.log2(minFreq);
+        const freqLog = Math.log2(freq) - Math.log2(this.minFreq);
+        const widthFreqLog = Math.log2(this.maxFreq) - Math.log2(this.minFreq);
         const hue = Math.round(270 * freqLog / widthFreqLog);
 
         const angle = (freqLog - (freqLog | 0)) * Math.PI * 2;
 
         // if ampl is not in DB: ampl is in [0, 1]
-        // const bright = Math.min(Math.max(minDbVolume + Math.log10(ampl) * 20, 0) / minDbVolume, 1);
-        const bright = Math.min(Math.max(minDbVolume + ampl, 0) / minDbVolume, 1);
+        // const bright = Math.min(Math.max(this.minDbVolume + Math.log10(ampl) * 20, 0) / this.minDbVolume, 1);
+        const bright = Math.min(Math.max(this.minDbVolume + ampl, 0) / this.minDbVolume, 1);
         this.ctx.strokeStyle = `hsla(${hue}, 100%, 50%, ${bright})`;
         const centrD2 = this._getCentreX();
         this.ctx.moveTo(centrD2, centrD2);
