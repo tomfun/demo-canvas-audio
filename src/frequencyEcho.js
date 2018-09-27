@@ -1,7 +1,7 @@
 'use strict';
 
 export class FrequencyEcho {
-    constructor({minDb = -140, maxDb = -30, frequencyEcho = 24, frequencyZoom = 4, cbFreqDataFloat32}) {
+    constructor({ minDb = -140, maxDb = -30, frequencyEcho = 4, frequencyZoom = 4, cbFreqDataFloat32 }) {
         this.minDb = minDb;
         this.maxDb = maxDb;
         this.frequencyEcho = frequencyEcho;
@@ -150,6 +150,36 @@ export class FrequencyEcho {
     }
 
     _dynamicThreshold(inArr) {
+        // plus plus
+        const bases = new Map();
+        const excludes = new Set();
+        let pictureResolution = 8; // we look for up to 8 harmonics
+        for (let i = 1; i < inArr.length / 3; i++) {
+            if (excludes.has(i)) {
+                continue;
+            }
+            const indexesRange = (new Array(pictureResolution))
+                .fill(0)
+                .map((_v, j) => i - 0.5 + j / pictureResolution);
+            const echoPicture = indexesRange.map((ind) => {
+                const c = this._calculateEchoTimes(inArr, ind);
+                const v = c >= 3 ? this._calculateEchoValue(inArr, ind, c) : 0;
+                return { c, v, ind };
+            })
+                .filter(({ v }) => v);
+            if (!echoPicture.length) {
+                continue;
+            }
+            const sum = echoPicture.reduce((a, { v }) => a + v, 0);
+            const maxHarmonicCount = echoPicture.reduce((a, { c }) => a > c ? a : c, 1);
+            const minHarmonicCount = echoPicture.reduce((a, { c }) => a > c ? c : a, 1);
+            indexesRange.forEach((ind) => {
+                for (let l = 2, j = ind * l; l < minHarmonicCount + 1; l++, j = ind * l) {
+                    excludes.set(Math.round(j));
+                }
+            });
+            bases.set(i, {sum, maxHarmonicCount});
+        }
         // dynamic threshold (maximums)
         // camel
         this._outThreshold.fill(Number.NEGATIVE_INFINITY);
@@ -166,13 +196,87 @@ export class FrequencyEcho {
                 localMaxI = i;
             }
         }
+        // plus minus
+        // for test - // inArr.forEach((v, i) => this._outThreshold[i] = v);
+        bases.forEach(({sum, maxHarmonicCount}, i) => {
+            const indexesRange = (new Array(pictureResolution))
+                .fill(0)
+                .map((_v, j) => i - 0.5 + j / pictureResolution);
+            indexesRange.forEach((ind) => {
+                const k = 9 * sum / pictureResolution;
+                for (let l = 3, j = ind * l; l < maxHarmonicCount + 1; l++, j = ind * l) {
+                    this._outThreshold[Math.round(j)] -= (maxHarmonicCount- l) * k;
+                }
+            });
+        });
+        // inArr.forEach((v, i) => this._outThreshold[i] = this.minDb);
+        // bases.forEach(({sum, maxHarmonicCount}, i) => {
+        //     const indexesRange = (new Array(pictureResolution))
+        //         .fill(0)
+        //         .map((_v, j) => i - 0.5 + j / pictureResolution);
+        //     indexesRange.forEach((ind) => {
+        //         const k = 6 * sum / pictureResolution;
+        //         for (let l = 1, j = ind * l; l < maxHarmonicCount + 1; l++, j = ind * l) {
+        //             this._outThreshold[Math.round(j)] += (maxHarmonicCount - l) * k;
+        //         }
+        //     });
+        // });
+        // console.debug('cnt', bases.size)
+
         // simple
-        this.peaksLimit = 50;
-        const threshold = this._outThreshold.slice(0).sort()[this._outThreshold.length - this.peaksLimit];
+        this.peaksLimit = 15;
+        const threshold = this._outThreshold.slice(0)
+            .sort()[this._outThreshold.length - this.peaksLimit];
         for (let i = 0; i < this._outThreshold.length; i++) {
             this._outThreshold[i] = this._outThreshold[i] >= threshold
                 ? this._outThreshold[i]
                 : Number.NEGATIVE_INFINITY;
         }
+    }
+
+    /**
+     * @param {Float32Array|Number[]} inArr array of FFT amplitudes (in Db)
+     * @param {Number} i Integer, base search frequency index
+     * @return {Number} Integer - times
+     * @private
+     */
+    _calculateEchoTimes(inArr, i) {
+        let amp = inArr[i];
+        let c = 1;
+        let j = i * (c + 1);
+        if (inArr[Math.round(j)] + 6 < amp) {
+            amp = inArr[Math.round(j)];
+            c++; // in some cases base f is lower than harmonic
+            j = i * (c + 1);
+        }
+        while (inArr[Math.round(j)] < amp) {
+            amp = inArr[Math.round(j)];
+            c++; // in some cases base f is lower than harmonic
+            j = i * (c + 1);
+        }
+
+        return c;
+    }
+
+    /**
+     * @param {Float32Array|Number[]} inArr array of FFT amplitudes (in Db)
+     * @param {Number} i Integer, base search frequency index
+     * @param {Number} c Integer, up to c
+     * @return {Number}
+     * @private
+     */
+    _calculateEchoValue(inArr, i, c) {
+        let v = (inArr[i] - this.minDb) / this.axMinIn;
+        v /= 3;
+        for (let l = 2, j = i * l; l < c; l++, j = i * l) {
+            // this._normalRange
+            const normd = (inArr[j] - this.minDb) / this.axMinIn;
+            if (normd < 0) {
+                continue;
+            }
+            v += normd;
+        }
+
+        return v;
     }
 }
