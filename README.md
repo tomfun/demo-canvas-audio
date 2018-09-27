@@ -2,6 +2,8 @@
 
 [Demo](https://demo.tomfun.co/canvas-audio)
 
+[![YouTube](https://i1.ytimg.com/vi/cDsuID_We-M/hqdefault.jpg)](https://youtu.be/cDsuID_We-M)
+
 # Dev
 
 ```bash
