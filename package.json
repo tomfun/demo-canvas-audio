@@ -1,11 +1,13 @@
 {
-  "name": "demoFftToCircle",
+  "name": "demo-fft-to-circle",
   "version": "0.0.1",
   "private": true,
   "description": "Draw Frequency Spectrum on Canvas demo",
   "main": "src.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "webpack",
+    "docker:build": "docker build -t demo-fft-to-circle .",
     "dev": "webpack && webpack -w"
   },
   "author": "tomfun",
