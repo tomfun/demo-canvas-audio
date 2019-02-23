@@ -2,6 +2,7 @@
 <html>
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=0.5"/>
     <title>Audio to Canvas demo</title>
     <style>
         #canvas-container {
@@ -20,6 +21,15 @@
     </style>
 </head>
 <body>
+<div>
+    <input type="file" id="file-uploader" accept="audio/*">
+    <audio id="audio-source" controls autoplay style="width: 600px;"></audio>
+</div>
+<div>
+    <input type="button" id="mic-toggle" title="microphone" value="connect to microphone"  style="width: 150px; height: 70px;">
+    <input type="button" id="mute-toggle" title="mute" value="mute"  style="width: 150px; height: 70px;">
+</div>
+
 <div id="canvas-container">
     <canvas id="canvasCircle" width="768" height="768">
     </canvas>
@@ -29,14 +39,6 @@
         <canvas id="canvasSpectrum" width="1024" height="384">
         </canvas>
     </div>
-</div>
-<div>
-    <input type="file" id="file-uploader" accept="audio/*">
-    <audio id="audio-source" controls autoplay style="width: 600px;"></audio>
-</div>
-<div>
-    <input type="button" id="mic-toggle" title="microphone" value="connect to microphone"  style="width: 150px; height: 70px;">
-    <input type="button" id="mute-toggle" title="mute" value="mute"  style="width: 150px; height: 70px;">
 </div>
 
 <script src="bundle.js"></script>
